@@ -27,9 +27,12 @@ import javax.annotation.Nullable;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
 
+import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.block.NetherPortalBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.util.ITooltipFlag;
+import net.minecraft.command.CommandSource;
+import net.minecraft.command.Commands;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.SpawnReason;
@@ -59,6 +62,7 @@ import net.minecraft.util.ActionResultType;
 import net.minecraft.util.Direction;
 import net.minecraft.util.Hand;
 import net.minecraft.util.NonNullList;
+import net.minecraft.util.RegistryKey;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvent;
@@ -128,7 +132,6 @@ import net.minecraftforge.event.world.BlockEvent.EntityPlaceEvent;
 import net.minecraftforge.event.world.BlockEvent.NeighborNotifyEvent;
 import net.minecraftforge.event.world.ChunkWatchEvent;
 import net.minecraftforge.event.world.ExplosionEvent;
-import net.minecraftforge.event.world.GetCollisionBoxesEvent;
 import net.minecraftforge.event.world.PistonEvent;
 import net.minecraftforge.event.world.SaplingGrowTreeEvent;
 import net.minecraftforge.event.world.SleepFinishedTimeEvent;
@@ -242,7 +245,7 @@ public class ForgeEventFactory
         return maxCanSpawnEvent.getResult() == Result.ALLOW ? maxCanSpawnEvent.getMaxPackSize() : entity.getMaxSpawnedInChunk();
     }
 
-    public static String getPlayerDisplayName(PlayerEntity player, String username)
+    public static ITextComponent getPlayerDisplayName(PlayerEntity player, ITextComponent username)
     {
         PlayerEvent.NameFormat event = new PlayerEvent.NameFormat(player, username);
         MinecraftForge.EVENT_BUS.post(event);
@@ -457,8 +460,9 @@ public class ForgeEventFactory
         MinecraftForge.EVENT_BUS.post(new PlayerFlyableFallEvent(player, distance, multiplier));
     }
 
-    public static boolean onPlayerSpawnSet(PlayerEntity player, BlockPos pos, boolean forced) {
-        return MinecraftForge.EVENT_BUS.post(new PlayerSetSpawnEvent(player, pos, forced));
+    public static boolean onPlayerSpawnSet(PlayerEntity player, RegistryKey<World> world, BlockPos pos, boolean forced)
+    {
+        return MinecraftForge.EVENT_BUS.post(new PlayerSetSpawnEvent(player, world, pos, forced));
     }
 
     public static void onPlayerClone(PlayerEntity player, PlayerEntity oldPlayer, boolean wasDeath)
@@ -672,12 +676,6 @@ public class ForgeEventFactory
         return !MinecraftForge.EVENT_BUS.post(new LivingDestroyBlockEvent(entity, pos, state));
     }
 
-    public static boolean gatherCollisionBoxes(World world, Entity entity, AxisAlignedBB aabb, List<AxisAlignedBB> outList)
-    {
-        MinecraftForge.EVENT_BUS.post(new GetCollisionBoxesEvent(world, entity, aabb, outList));
-        return outList.isEmpty();
-    }
-
     public static boolean getMobGriefingEvent(World world, Entity entity)
     {
         EntityMobGriefingEvent event = new EntityMobGriefingEvent(entity);
@@ -730,5 +728,11 @@ public class ForgeEventFactory
         AddReloadListenerEvent event = new AddReloadListenerEvent(dataPackRegistries);
         MinecraftForge.EVENT_BUS.post(event);
         return event.getListeners();
+    }
+    
+    public static void onCommandRegister(CommandDispatcher<CommandSource> dispatcher, Commands.EnvironmentType environment)
+    {
+        RegisterCommandsEvent event = new RegisterCommandsEvent(dispatcher, environment);
+        MinecraftForge.EVENT_BUS.post(event);
     }
 }
